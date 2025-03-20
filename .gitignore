@@ -4,4 +4,3 @@ out
 gen
 .idea/
 data/UCF101/*
-models/moviner/a0/*

@@ -3,4 +3,5 @@
 out
 gen
 .idea/
-yolo-weights/
+data/
+models/

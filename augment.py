@@ -147,9 +147,6 @@ def augment_video(video_name, video_path, output_dir):
 
     resized_video = resize_video(video_path, f"{os.path.join(output_dir, video_name)}.mp4")
 
-    if not resized_video:
-        print(f"Skipping {video_name} due to resize error!")
-        return
     if resized_video:
         flip_video(resized_video, os.path.join(output_dir, f"{video_name}_flipped.mp4"))
         blur_video(resized_video, os.path.join(output_dir, f"{video_name}_blurred.mp4"))
@@ -160,33 +157,6 @@ def augment_video(video_name, video_path, output_dir):
         # change_speed(resized_video, os.path.join(output_dir, f"{video_name}_slowed_down.mp4"), 0.8)
     else:
         print(f"Skipping {video_name} due to resize error!")
-
-def split_data(input_folder, output_folder, train_ratio=0.8, test_ratio=0.2):
-    assert train_ratio + test_ratio == 1.0, "Train and test ratios must sum to 1"
-
-    os.makedirs(output_folder, exist_ok=True)
-
-    for split in ["train", "test"]:
-        os.makedirs(os.path.join(output_folder, split), exist_ok=True)
-
-    for class_name in os.listdir(input_folder):
-        class_path = os.path.join(input_folder, class_name)
-        if not os.path.isdir(class_path):
-            continue
-
-        videos = [f for f in os.listdir(class_path) if f.endswith(".mp4")]
-        random.shuffle(videos)
-
-        train_videos, test_videos = train_test_split(videos, test_size=test_ratio, random_state=42)
-
-        for split, video_list in zip(["train", "test"], [train_videos, test_videos]):
-            split_class_path = os.path.join(output_folder, split, class_name)
-            os.makedirs(split_class_path, exist_ok=True)
-
-            for video in video_list:
-                shutil.copy(os.path.join(class_path, video), os.path.join(split_class_path, video))
-
-    print("Data splitting completed!")
 
 def split_data_with_validation(input_folder, output_folder, train_ratio=0.7, val_ratio=0.15, test_ratio=0.15):
     assert train_ratio + val_ratio + test_ratio == 1.0, "Tổng của train, val, test phải bằng 1"
@@ -233,9 +203,9 @@ def main():
     parser.add_argument("--output", default="data/UCF101_augmented", help="Path to output folder")
     parser.add_argument("--split_output", default="data/UCF101_split", help="Path to split folder")
     parser.add_argument(
-        "--labels",
+        "--labels_old",
         default="BenchPress,Biking,PushUps,PullUps,Diving,Basketball,TennisSwing,GolfSwing,BaseballPitch,SoccerPenalty",
-        help="Augment only chosen labels"
+        help="Augment only chosen labels_old"
     )
     parser.add_argument("--workers", type=int, default=4, help="Number of parallel workers")
     args = parser.parse_args()
@@ -254,28 +224,7 @@ def main():
         output_path = os.path.join(args.output, label)
         augment_video(file[:-4], video_path, output_path)
 
-    # # Verify
-    # count = 0
-    # for folder in os.listdir(args.output):
-    #     count += len(os.listdir(os.path.join(args.output, folder)))
-    #
-    # if count == len(files) * 8:
-    #     print("No files lost")
-
-    # split_data(args.output, args.split_output)
     split_data_with_validation(args.output, f"{args.split_output}_with_val")
-
-    # # Verify split data
-    # count = 0
-    # for folder in os.listdir(f"{args.split_output}_with_val"):
-    #     for class_name in os.listdir(os.path.join(f"{args.split_output}_with_val", folder)):
-    #         count += len(os.listdir(os.path.join(f"{args.split_output}_with_val", folder, class_name)))
-    #     # count += len(os.listdir(os.path.join(f"{args.split_output}_with_val", folder)))
-    #
-    # if count == len(files) * 8:
-    #     print("No files lost after splitting")
 
 if __name__ == "__main__":
     main()
-
-# python augment.py - -labels all && python augment.py --output data/UCF101_subset_augmented --split_output data/UCF101_subset_split

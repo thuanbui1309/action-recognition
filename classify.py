@@ -18,7 +18,7 @@ def main():
     parser = argparse.ArgumentParser(description="Real-time Action Recognition with MoviNet")
     parser.add_argument("--input", type=str, default=0, help="Video file path or '0' for webcam")
     parser.add_argument("--augmented", type=str, default=False, help="Model trained with augmented data or not")
-    parser.add_argument("--labels", type=str, default="models/labels.npy", help="labels annotation")
+    parser.add_argument("--labels", type=str, default="models/movinet/labels.npy", help="labels_old annotation")
     parser.add_argument("--env", type=str, default=None, help="QPA_Platform")
     args = parser.parse_args()
 
@@ -26,7 +26,7 @@ def main():
     if args.env:
         os.environ["QT_QPA_PLATFORM"] = args.env
 
-    # Load labels
+    # Load labels_old
     labels = np.load(args.labels, allow_pickle=True)
 
     # Create backbone
@@ -53,11 +53,12 @@ def main():
 
     # Load weights from the checkpoint to the rebuilt model
     if args.augmented:
-        weights = "models/a0/a0_augmented.weights.h5"
+        weights = "models/movinet/a0/a0_augmented.weights.h5"
     else:
-        weights = "models/a0/a0.weights.h5"
+        weights = "models/movinet/a0/a0.weights.h5"
     model.load_weights(weights)
 
+    print(args.input)
     # Input source
     cap = cv2.VideoCapture(args.input)
     if not cap.isOpened():

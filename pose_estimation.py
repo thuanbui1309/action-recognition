@@ -2,9 +2,7 @@ import cv2
 import os
 import numpy as np
 from ultralytics import YOLO
-from argparse import ArgumentParser
 from collections import deque
-
 
 def calculate_angle(v1, v2):
     """Calculate the angle between two vectors."""
@@ -221,27 +219,25 @@ class ActionStateManager:
         return active_actions
 
 
-def main():
-    parser = ArgumentParser()
-    parser.add_argument("--pose_model", type=str, default="models/yolo pose/yolo11n-pose.pt",
-                        help="Path to the YOLO pose model")
-    parser.add_argument("--object_detection_model", type=str, default="models/yolo phone hand detection/best.pt",
-                        help="Path to the YOLO object detection model")
-    parser.add_argument("--cam_idx", type=int, default=0, help="Camera index")
-    parser.add_argument("--env", type=str, default=None, help="QPA_Platform")
-    parser.add_argument("--history_frames", type=int, default=20,
-                        help="Number of frames to keep in history for motion analysis")
-    parser.add_argument("--smoothing_window", type=int, default=15,
-                        help="Window size for temporal smoothing")
-    args = parser.parse_args()
+def main(pose_model="models/yolo pose/yolo11n-pose.pt",
+         object_detection_model="models/yolo phone hand detection/best.pt",
+         cam_input="temp_videos/56f16b86-2a43-4faa-aa22-2158bc544ac8.mp4",
+         env=None,
+         history_frames=20,
+         smoothing_window=15):
 
-    if args.env:
-        os.environ["QT_QPA_PLATFORM"] = args.env
+    results = []
 
-    pose_model = YOLO(args.pose_model)
-    object_model = YOLO(args.object_detection_model)
+    display_count = 0
+    if env:
+        os.environ["QT_QPA_PLATFORM"] = env
 
-    cap = cv2.VideoCapture(args.cam_idx)
+    pose_model = YOLO(pose_model)
+    object_model = YOLO(object_detection_model)
+
+    input_src = 0 if not cam_input else cam_input
+
+    cap = cv2.VideoCapture(input_src)
     if not cap.isOpened():
         print("Error: Could not open webcam.")
         exit()
@@ -256,7 +252,7 @@ def main():
 
     # Initialize keypoint history for each potential person
     # Using dictionaries with person ID as key
-    max_history = args.history_frames
+    max_history = history_frames
     wrist_history = {}  # For tracking hand movement
     ankle_history = {}  # For tracking walking
     hip_history = {}  # For tracking walking
@@ -265,19 +261,21 @@ def main():
     last_person_positions = {}
 
     # Initialize action state manager for temporal smoothing
-    action_manager = ActionStateManager(smoothing_window=args.smoothing_window)
+    action_manager = ActionStateManager(smoothing_window=smoothing_window)
 
     while True:
         ret, frame = cap.read()
         if not ret:
-            print("Failed to grab frame")
+            print("End of video")
             break
+
+        frame_result = []
 
         # Convert current frame to grayscale for optical flow
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-        pose_results = pose_model(frame)
-        object_results = object_model(frame)
+        pose_results = pose_model(frame, verbose=False)
+        object_results = object_model(frame, verbose=False)
 
         hands, phones, people = [], [], []
         keypoints_list = []
@@ -427,7 +425,12 @@ def main():
                 display_actions = []
                 for action in active_actions:
                     confidence = action_manager.states[person_id].get(action, 0) * 100
-                    display_actions.append(f"{action} ({confidence:.0f}%)")
+                    display_actions.append(f"{action}")
+
+                frame_result.append({
+                    "person_id": i,
+                    "actions": display_actions
+                })
 
                 # Draw bounding box and actions
                 cv2.putText(frame, ", ".join(display_actions), (x1, y1 - 10),
@@ -447,17 +450,23 @@ def main():
                         for j in range(len(points) - 1):
                             color = (0, 255, 0) if "Hand Waving" in active_actions else (0, 0, 255)
                             cv2.line(frame, tuple(points[j]), tuple(points[j + 1]), color, 2)
+            else:
+                frame_result.append({
+                    "person_id": i,
+                    "actions": []
+                })
 
         # Update previous frame
         prev_gray = gray.copy()
 
-        cv2.imshow("YOLO Pose & Object Detection", frame)
+        # cv2.imshow("YOLO Pose & Object Detection", frame)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 
-    cap.release()
-    cv2.destroyAllWindows()
+        display_count+=1
+        results.append(frame_result)
 
+    return results
 
 if __name__ == "__main__":
     main()

@@ -6,14 +6,13 @@ import pose_estimation
 
 app = FastAPI()
 
-@app.post("/actions/detect")
-async def count_people(video: UploadFile = File(...)):
+@app.post("/actions")
+async def actions_detections(video: UploadFile = File(...)):
     # Path for the temporary directory
     filename = f"{uuid.uuid4()}.mp4"
     temp_path = os.path.join("temp_videos", filename)
     os.makedirs("temp_videos", exist_ok=True)
 
-    # Save the uploaded video file to the temporary directory
     try:
         with open(temp_path, "wb") as buffer:
             shutil.copyfileobj(video.file, buffer)

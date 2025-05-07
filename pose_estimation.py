@@ -239,13 +239,13 @@ def main(pose_model="models/yolo pose/yolo11n-pose.pt",
 
     cap = cv2.VideoCapture(input_src)
     if not cap.isOpened():
-        print("Error: Could not open webcam.")
+        # print("Error: Could not open webcam.")
         exit()
 
     # Initialize previous frame and optical flow parameters
     ret, prev_frame = cap.read()
     if not ret:
-        print("Failed to grab first frame")
+        # print("Failed to grab first frame")
         exit()
 
     prev_gray = cv2.cvtColor(prev_frame, cv2.COLOR_BGR2GRAY)
@@ -266,7 +266,7 @@ def main(pose_model="models/yolo pose/yolo11n-pose.pt",
     while True:
         ret, frame = cap.read()
         if not ret:
-            print("End of video")
+            # print("End of video")
             break
 
         frame_result = []

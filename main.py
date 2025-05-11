@@ -3,6 +3,8 @@ import shutil
 import os
 import uuid
 import pose_estimation
+from utils.active_marking import active_marking
+
 
 app = FastAPI()
 
@@ -19,8 +21,9 @@ async def actions_detections(video: UploadFile = File(...)):
 
         # Detect actions
         try:
-            result = pose_estimation.main(cam_input=temp_path)
+            actions = pose_estimation.main(cam_input=temp_path)
 
+            state = active_marking(actions)
         except Exception as e:
             return {"error": f"Error in pose estimation: {str(e)}"}
 
@@ -33,4 +36,7 @@ async def actions_detections(video: UploadFile = File(...)):
     except Exception as e:
         return {"error": f"Error deleting temp file: {str(e)}"}
 
-    return {"action_detections": result}
+    return {
+        "state": state,
+        "action_detections": actions
+    }
